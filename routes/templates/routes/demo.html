@@ -1,0 +1,493 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fuel Route Planner</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #667085;
+      --blue: #2563eb;
+      --line: #e5e7eb;
+      --panel: #fff;
+      --bg: #f4f7fb
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      color: var(--ink)
+    }
+
+    .shell {
+      max-width: 1250px;
+      margin: auto;
+      padding: 28px 20px 40px
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 22px
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--blue);
+      font-weight: 800
+    }
+
+    .top h1 {
+      margin: 6px 0;
+      font-size: clamp(26px, 4vw, 38px);
+      letter-spacing: -.04em
+    }
+
+    .sub {
+      color: var(--muted);
+      margin: 0;
+      max-width: 650px;
+      line-height: 1.5
+    }
+
+    .pill {
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      background: #eff6ff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 18px
+    }
+
+    .panel,
+    .map-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 8px 28px #1018280a;
+      overflow: hidden
+    }
+
+    .panel {
+      padding: 22px
+    }
+
+    .panel h2 {
+      font-size: 17px;
+      margin: 0 0 5px
+    }
+
+    .help {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin: 0 0 20px
+    }
+
+    .field {
+      display: block;
+      margin: 15px 0
+    }
+
+    .field span {
+      display: block;
+      font-size: 12px;
+      font-weight: 750;
+      color: #475467;
+      margin-bottom: 7px
+    }
+
+    .field input {
+      width: 100%;
+      border: 1px solid #d0d5dd;
+      border-radius: 10px;
+      padding: 12px;
+      font: inherit;
+      color: var(--ink);
+      outline: none
+    }
+
+    .field input:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px #dbeafe
+    }
+
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      background: var(--blue);
+      color: white;
+      font-weight: 750;
+      padding: 13px 15px;
+      font: inherit;
+      cursor: pointer
+    }
+
+    .btn:disabled {
+      opacity: .6;
+      cursor: wait
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin: 12px 0 0
+    }
+
+    .error {
+      display: none;
+      margin-top: 14px;
+      padding: 11px;
+      border-radius: 10px;
+      background: #fef2f2;
+      color: #b42318;
+      font-size: 13px;
+      line-height: 1.45
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px
+    }
+
+    .stat strong {
+      font-size: 21px;
+      letter-spacing: -.03em
+    }
+
+    .map-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 20px 0
+    }
+
+    .map-head h2 {
+      font-size: 16px;
+      margin: 0
+    }
+
+    .map-head span {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    #map {
+      height: 470px;
+      width: 100%;
+      background: #e8eef5
+    }
+
+    .below {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(240px, .75fr);
+      gap: 18px;
+      margin-top: 18px
+    }
+
+    .section {
+      padding: 20px
+    }
+
+    .section h2 {
+      font-size: 16px;
+      margin: 0 0 14px
+    }
+
+    .stops {
+      display: grid;
+      gap: 10px
+    }
+
+    .stop {
+      display: flex;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px
+    }
+
+    .stop-num {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      flex: none;
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 800
+    }
+
+    .stop-main {
+      flex: 1;
+      min-width: 0
+    }
+
+    .stop-title {
+      font-weight: 750;
+      font-size: 13px
+    }
+
+    .stop-meta {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 4px
+    }
+
+    .stop-cost {
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5
+    }
+
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 12px 18px;
+      border-top: 1px solid var(--line)
+    }
+
+    .dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin-right: 5px;
+      background: #2563eb
+    }
+
+    .dot.green {
+      background: #16a34a
+    }
+
+    .dot.orange {
+      background: #f97316
+    }
+
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 22px
+    }
+
+    @media(max-width:850px) {
+      .layout {
+        grid-template-columns: 1fr
+      }
+
+      .below {
+        grid-template-columns: 1fr
+      }
+
+      .panel {
+        padding: 18px
+      }
+
+      #map {
+        height: 400px
+      }
+
+      .top {
+        align-items: flex-start;
+        flex-direction: column
+      }
+
+      .stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr))
+      }
+
+      .stat {
+        padding: 10px
+      }
+
+      .stat strong {
+        font-size: 18px
+      }
+    }
+
+    @media(max-width:480px) {
+      .shell {
+        padding: 18px 12px 28px
+      }
+
+      .stats {
+        gap: 6px
+      }
+
+      .stat span {
+        font-size: 10px
+      }
+
+      .stat strong {
+        font-size: 16px
+      }
+
+      #map {
+        height: 340px
+      }
+
+      .map-head {
+        padding: 15px 14px 0
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <header class="top">
+      <div>
+        <div class="eyebrow">Python · Django · OpenRouteService</div>
+        <h1>Fuel Route Planner</h1>
+        <p class="sub">Plan a US road trip and explore the route with fuel stops selected by the backend.</p>
+      </div>
+      <div class="pill">Interactive demo</div>
+    </header>
+    <main class="layout">
+      <section class="panel">
+        <h2>Plan your trip</h2>
+        <p class="help">Enter the coordinates of the start and destination. The API calculates the route and recommends
+          fuel stops.</p>
+        <form id="route-form">
+          <label class="field"><span>Start latitude</span><input id="start-lat" type="number" step="any" value="40.7128"
+              required></label>
+          <label class="field"><span>Start longitude</span><input id="start-lon" type="number" step="any"
+              value="-74.0060" required></label>
+          <label class="field"><span>Destination latitude</span><input id="finish-lat" type="number" step="any"
+              value="41.8781" required></label>
+          <label class="field"><span>Destination longitude</span><input id="finish-lon" type="number" step="any"
+              value="-87.6298" required></label>
+          <button class="btn" id="submit-btn" type="submit">Calculate route</button>
+          <p class="hint">Example coordinates: New York City → Chicago. The backend requires a valid OpenRouteService
+            API key and station data for this route.</p>
+          <div class="error" id="error" role="alert"></div>
+        </form>
+      </section>
+      <section class="map-panel">
+        <div class="map-head">
+          <h2>Route map</h2><span id="map-status">Ready to calculate</span>
+        </div>
+        <div class="stats">
+          <div class="stat"><span>Total distance</span><strong id="distance">—</strong></div>
+          <div class="stat"><span>Estimated fuel cost</span><strong id="cost">—</strong></div>
+          <div class="stat"><span>Fuel stops</span><strong id="stop-count">—</strong></div>
+        </div>
+        <div id="map" aria-label="Map showing route and fuel stations"></div>
+        <div class="legend"><span><i class="dot"></i>Route</span><span><i class="dot green"></i>Start</span><span><i
+              class="dot orange"></i>Fuel stop</span><span><i class="dot"
+              style="background:#dc2626"></i>Destination</span></div>
+      </section>
+    </main>
+    <section class="below">
+      <div class="map-panel section">
+        <h2>Recommended fuel stops</h2>
+        <div class="stops" id="stops">
+          <p class="empty">Calculate a route to see the recommended fuel stops here.</p>
+        </div>
+      </div>
+      <div class="map-panel section">
+        <h2>How it works</h2>
+        <p class="empty">Django validates the request, OpenRouteService provides the road geometry, and the backend
+          evaluates nearby fuel stations against the vehicle's range and fuel-cost model. This page visualizes the API
+          response; it does not calculate a separate route in the browser.</p>
+      </div>
+    </section>
+    <div class="footer">Demo interface · Map data © OpenStreetMap contributors</div>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    const map = L.map('map');
+    // Public Esri World Street Map tiles (no API key required for this demo).
+    // Review Esri's basemap terms and usage limits before deploying publicly at scale.
+    L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution: "Tiles &copy; Esri &mdash; Sources: Esri, HERE, Garmin, OpenStreetMap contributors, and the GIS user community",
+        maxZoom: 19
+      }
+    ).addTo(map);
+    map.setView([39.5, -98.35], 4);
+    let routeLayer = null;
+    let markersLayer = L.layerGroup().addTo(map);
+    const $ = (id) => document.getElementById(id);
+    const money = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(n || 0));
+    function csrfToken() { const m = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+    function markerIcon(color) { return L.divIcon({ className: 'custom-marker', html: `<span style="display:block;width:15px;height:15px;border:3px solid white;border-radius:50%;background:${color};box-shadow:0 1px 6px #0006"></span>`, iconSize: [15, 15], iconAnchor: [7, 7] }); }
+    function addPoint(coords, color, title, popup) { const marker = L.marker(coords, { icon: markerIcon(color), title }).bindPopup(popup); markersLayer.addLayer(marker); return marker; }
+    function showStops(stops) { const root = $('stops'); root.replaceChildren(); if (!stops.length) { root.innerHTML = '<p class="empty">No fuel stops were returned for this route. Check the backend result and station coverage.</p>'; return; } stops.forEach((s, i) => { const el = document.createElement('div'); el.className = 'stop'; const name = s.station || 'Fuel station'; const city = [s.city, s.state].filter(Boolean).join(', '); el.innerHTML = `<div class="stop-num">${i + 1}</div><div class="stop-main"><div class="stop-title"></div><div class="stop-meta"></div></div><div class="stop-cost"></div>`; el.querySelector('.stop-title').textContent = name; el.querySelector('.stop-meta').textContent = `${city || 'Location unavailable'} · ${Number(s.distance_from_start_miles).toLocaleString('en-US')} mi from start · ${Number(s.gallons).toFixed(2)} gal · ${money(s.price_per_gallon)}/gal`; el.querySelector('.stop-cost').textContent = money(s.cost); root.appendChild(el); }); }
+    $('route-form').addEventListener('submit', async (event) => {
+      event.preventDefault(); const button = $('submit-btn'), error = $('error'); error.style.display = 'none'; button.disabled = true; button.textContent = 'Calculating…'; $('map-status').textContent = 'Request in progress';
+      const payload = { start: { latitude: Number($('start-lat').value), longitude: Number($('start-lon').value) }, finish: { latitude: Number($('finish-lat').value), longitude: Number($('finish-lon').value) } };
+      try {
+        const response = await fetch('/api/routes/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() }, body: JSON.stringify(payload) });
+        const data = await response.json(); if (!response.ok) throw new Error(data.error || data.detail || `Request failed (${response.status})`);
+        if (!data.route || !Array.isArray(data.route.geometry) || data.route.geometry.length < 2) throw new Error('The API response did not include enough route coordinates to draw the map.');
+        // Backend geometry is decoded as [latitude, longitude] pairs (polyline format).
+        const points = data.route.geometry.map(p => [Number(p[0]), Number(p[1])]);
+        if (routeLayer) map.removeLayer(routeLayer); markersLayer.clearLayers();
+        routeLayer = L.polyline(points, { color: '#2563eb', weight: 5, opacity: .9, lineJoin: 'round' }).addTo(map);
+        const start = points[0], finish = points[points.length - 1]; addPoint(start, '#16a34a', 'Start', '<b>Start</b>'); addPoint(finish, '#dc2626', 'Destination', '<b>Destination</b>');
+        const stops = (data.fuel && Array.isArray(data.fuel.stops)) ? data.fuel.stops : [];
+        stops.forEach((s, i) => { const loc = s.location; if (!loc || loc.latitude == null || loc.longitude == null) return; const popup = document.createElement('div'); const strong = document.createElement('strong'); strong.textContent = `Fuel stop ${i + 1}: ${s.station || 'Station'}`; popup.appendChild(strong); const line = document.createElement('div'); line.textContent = `${[s.city, s.state].filter(Boolean).join(', ')} · ${money(s.price_per_gallon)}/gal · Stop cost ${money(s.cost)}`; popup.appendChild(line); addPoint([Number(loc.latitude), Number(loc.longitude)], '#f97316', s.station || 'Fuel stop', popup); });
+        map.fitBounds(routeLayer.getBounds(), { padding: [24, 24] }); $('distance').textContent = `${Number(data.route.distance_miles).toLocaleString('en-US', { maximumFractionDigits: 2 })} mi`; $('cost').textContent = money(data.fuel?.total_cost); $('stop-count').textContent = stops.length; $('map-status').textContent = 'Route calculated'; showStops(stops);
+      } catch (err) { error.textContent = err.message || 'Unable to calculate this route.'; error.style.display = 'block'; $('map-status').textContent = 'Could not calculate'; } finally { button.disabled = false; button.textContent = 'Calculate route'; }
+    });
+  </script>
+</body>
+
+</html>

@@ -1,4 +1,7 @@
 from requests import RequestException
+from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -93,3 +96,8 @@ class RoutePlanningView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+@ensure_csrf_cookie
+def route_demo(request):
+    """Render a small browser UI for the existing route-planning API."""
+    return render(request, "routes/demo.html")

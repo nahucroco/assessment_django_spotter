@@ -213,3 +213,15 @@ assessment_django_spotter/
 Fuel station geocoding is performed as a data preparation step rather than during API requests. This avoids adding external geocoding calls and latency to the route planning endpoint.
 
 The API makes one routing API call per request.
+
+## Interactive route map demo
+
+A small browser interface is available at `/demo/` when the Django development server is running. It calls the existing `POST /api/routes/` endpoint and renders the returned route geometry and fuel stops with Leaflet and OpenStreetMap.
+
+1. Install the dependencies listed in `requirements.txt` in your virtual environment.
+2. Set `OPENROUTESERVICE_API_KEY` in your `.env` file.
+3. Run migrations if needed with `python manage.py migrate`.
+4. Start Django with `python manage.py runserver`.
+5. Open `http://127.0.0.1:8000/demo/`.
+
+The demo uses the default coordinates for New York City and Chicago. It requires a working OpenRouteService API key and station records with coordinates along the route. The map uses Leaflet from a CDN and OpenStreetMap tiles, so the browser needs internet access. This UI does not change the existing route-planning algorithm or API response format.
